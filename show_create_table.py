@@ -74,10 +74,21 @@ def show_create_table(host, user, password, dbname, schemaname=None, tablename=N
     statements = build_stmts(table_defs)
     return statements
 
-def main(host, user, password, dbname, schemaname=None, tablename=None, port=5432):
+def show_tables_to_file(host, user, password, dbname, outfile, schemaname=None, tablename=None, port=5432):
     for table, stmt in show_create_table(
         host, user, password, dbname, schemaname, tablename, port):
-        print ('-- Table: %s\n%s\n' % (table, stmt))
+        outfile.write('-- Table: ' + table + '\n' + stmt + '\n\n')
+
+#@param filename: output file, will print to stdout by default
+def show_tables(host, user, password, dbname, filename=None, schemaname=None, tablename=None, port=5432):
+    if filename is not None:
+        with open(filename, 'w') as f:
+            show_tables_to_file(host, user, password, dbname, f, schemaname, tablename, port)
+    else:
+        import sys
+        f = sys.stdout
+        show_tables_to_file(host, user, password, dbname, f, schemaname, tablename, port)
+            
 
 if __name__ == '__main__':
     import argparse
@@ -88,17 +99,19 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dbname', required=True, dest='dbname')
     parser.add_argument('-W', '--password', required=True, dest='password')
     parser.add_argument('-p', '--port', default=5432, dest='port')
+    parser.add_argument('-f', '--file', required=False, dest='file')
     parser.add_argument('--schema', dest='schemaname')
     parser.add_argument('--table', dest='tablename')
 
     args = parser.parse_args()
-    main(
+    show_tables(
         args.host,
         args.user,
         args.password,
         args.dbname,
+        args.file,
         args.schemaname,
         args.tablename,
-        args.port
+        args.port,
     )
 

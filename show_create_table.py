@@ -13,18 +13,23 @@ def get_table_defs(conn, schemaname, tablename):
     cur = conn.cursor()
     if schemaname:
         cur.execute('SET SEARCH_PATH = %s;', (schemaname, ))
+    wheres = []
     if tablename:
-        cur.execute(
-            'SELECT * FROM pg_table_def WHERE tablename = %s',
-            (tablename, ))
-    else:
-        cur.execute('SELECT * FROM pg_table_def')
+        wheres.append('tablename = %(table)s')
+    if schemaname:
+        wheres.append('schemaname = %(schema)s')
+    sql = 'SELECT * FROM pg_table_def'
+    if wheres:
+        sql += ' WHERE ' + ' AND '.join(wheres)
+    cur.execute(sql, dict(table=tablename, schema=schemaname))
     defs = cur.fetchall()
     cur.close()
     return defs
 
 def get_table_name(r):
-    return '%s.%s' % (r[0], r[1])
+    if '.' not in r[0] and '.' not in r[1]:
+        return '%s.%s' % (r[0], r[1])
+    return '"%s"."%s"' % (r[0], r[1])
 
 def group_table_defs(table_defs):
     curr_table = None
@@ -42,7 +47,7 @@ def group_table_defs(table_defs):
 def build_stmts(table_defs):
     for defs in group_table_defs(table_defs):
         table = get_table_name(defs[0])
-        s = 'CREATE TABLE "%s" (\n' % table
+        s = 'CREATE TABLE %s (\n' % table
         cols = []
         for d in defs:
             c = []
@@ -72,8 +77,7 @@ def show_create_table(host, user, password, dbname, schemaname=None, tablename=N
 def show_tables_to_file(host, user, password, dbname, outfile, schemaname=None, tablename=None, port=5432):
     for table, stmt in show_create_table(
         host, user, password, dbname, schemaname, tablename, port):
-        outfile.write('-- Table: ' + table + '\n')
-        outfile.write(stmt + '\n\n')
+        outfile.write('-- Table: ' + table + '\n' + stmt + '\n\n')
 
 #@param filename: output file, will print to stdout by default
 def show_tables(host, user, password, dbname, filename=None, schemaname=None, tablename=None, port=5432):

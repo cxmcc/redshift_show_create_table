@@ -69,7 +69,11 @@ def show_create_table(host, user, password, dbname, schemaname=None, tablename=N
     statements = build_stmts(table_defs)
     return statements
 
-def main(host, user, password, dbname, schemaname=None, tablename=None, port=5432):
+#@param file: output file, will print to stdout by default
+def show_tables(host, user, password, dbname, schemaname=None, tablename=None, port=5432, file=None):
+    if file is not None:
+        import sys
+        sys.stdout = open(file, 'w')
     for table, stmt in show_create_table(
         host, user, password, dbname, schemaname, tablename, port):
         print '-- Table:', table
@@ -85,17 +89,19 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dbname', required=True, dest='dbname')
     parser.add_argument('-W', '--password', required=True, dest='password')
     parser.add_argument('-p', '--port', default=5432, dest='port')
+    parser.add_argument('-f', '--file', required=False, dest='file')
     parser.add_argument('--schema', dest='schemaname')
     parser.add_argument('--table', dest='tablename')
 
     args = parser.parse_args()
-    main(
+    show_tables(
         args.host,
         args.user,
         args.password,
         args.dbname,
         args.schemaname,
         args.tablename,
-        args.port
+        args.port,
+        args.file,
     )
 
